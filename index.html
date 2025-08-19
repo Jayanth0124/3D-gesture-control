@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Title -->
+    <title>Fingr Lab | 3D Hand Tracking with Gestures & Three.js</title>
+
+    <!-- Meta Description (SEO) -->
+    <meta name="description"
+        content="Fingr Lab is an interactive 3D hand tracking demo powered by MediaPipe and Three.js. Control shapes, colors, and sizes using natural hand gestures in real-time.">
+
+    <!-- Keywords (SEO) -->
+    <meta name="keywords"
+        content="Fingr Lab, 3D Hand Tracking, Gesture Control, MediaPipe Hands, Three.js demo, interactive 3D, AI hand tracking, motion control, webXR">
+
+    <!-- Author -->
+    <meta name="author" content="Donavalli Jayanth">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="public/logo.jpg">
+
+    <!-- Open Graph (for social sharing) -->
+    <meta property="og:title" content="Fingr Lab | 3D Hand Tracking with Gestures">
+    <meta property="og:description"
+        content="Control 3D objects with your hands using MediaPipe & Three.js. Fingr Lab lets you change shapes, colors, and sizes in real-time with natural gestures.">
+    <meta property="og:image" content="/public/logo.png">
+    <meta property="og:url" content="https://www.yourdomain.com">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Fingr Lab | 3D Hand Tracking with Gestures">
+    <meta name="twitter:description"
+        content="Try Fingr Lab - a unique interactive demo where you control 3D objects with hand gestures using MediaPipe & Three.js.">
+    <meta name="twitter:image" content="/public/logo.png">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #webcam {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+            /* Mirror the webcam feed */
+        }
+
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1);
+            /* Mirror the canvas to match webcam */
+            pointer-events: none;
+        }
+
+        #three-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        #status {
+            position: absolute;
+            top: 90px;
+            left: 20px;
+            color: #fff;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 8px;
+            z-index: 10;
+            font-size: 0.9em;
+        }
+
+        /* --- Premium Header & Footer UI --- */
+        header,
+        footer {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            padding: 15px 30px;
+            box-sizing: border-box;
+            background: rgba(22, 22, 22, 0.5);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-style: solid;
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            z-index: 10;
+        }
+
+        header {
+            top: 0;
+            justify-content: space-between;
+            border-width: 0 0 1px 0;
+            justify-content: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.2em;
+            font-weight: 700;
+        }
+
+        footer {
+            bottom: 0;
+            justify-content: center;
+            border-width: 1px 0 0 0;
+            font-size: 0.9em;
+        }
+
+        footer a {
+            color: #fff;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.2s;
+        }
+
+        footer a:hover {
+            color: #00FFFF;
+            /* Cyan on hover */
+        }
+
+        .social-icons {
+            margin-left: 20px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .social-icons svg {
+            width: 20px;
+            height: 20px;
+            fill: #fff;
+            transition: fill 0.2s;
+        }
+
+        .social-icons a:hover svg {
+            fill: #00FFFF;
+        }
+
+        /* --- Onboarding Modal --- */
+        #onboarding-modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 20;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: rgba(30, 30, 30, 0.9);
+            padding: 30px 40px;
+            border-radius: 12px;
+            text-align: center;
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+        }
+
+        .modal-content p {
+            margin: 15px 0;
+        }
+
+        #close-modal {
+            padding: 10px 25px;
+            border: none;
+            background: #007bff;
+            color: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.2s;
+        }
+
+        #close-modal:hover {
+            background: #0056b3;
+        }
+
+        /* --- Settings Panel --- */
+        #settings-panel {
+            position: absolute;
+            top: 90px;
+            right: 20px;
+            background: rgba(22, 22, 22, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            z-index: 10;
+        }
+
+        #settings-panel h3 {
+            margin: 0 0 10px 0;
+            color: #fff;
+            font-size: 1em;
+        }
+
+        .shape-selector button {
+            width: 100%;
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: transparent;
+            color: #fff;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .shape-selector button:hover,
+        .shape-selector button.active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Header logo and title */
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;    
+            width: 100%;
+            /* space between logo and text */
+        }
+
+        .logo {
+            height: 40px;
+            /* adjust size */
+            width: auto;
+            border-radius: 6px;
+            /* optional rounded logo */
+        }
+
+        @font-face {
+            font-family: 'Tomato3D';
+            src: url('fonts/Tomato3D.ttf') format('truetype');
+            /* adjust if it’s .otf or .woff */
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        @font-face {
+            font-family: 'PearlHearts';
+            src: url('fonts/Perls\ Hearts.otf') format('opentype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8em;
+            font-family: 'Tomato3D', sans-serif;
+            font-weight: normal;
+            letter-spacing: 1px;
+            /* optional styling */
+        }
+
+        footer p.designed-by {
+            font-family: 'PearlHearts', cursive;
+            font-size: 1.3em;
+            /* make it stand out */
+            color: #fff;
+            margin: 8px 0;
+        }
+
+        footer p.designed-by a {
+            color: #fff;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        footer p.designed-by a:hover {
+            color: #00FFFF;
+            /* cyan hover */
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="logo-container">
+            <img src="/public/logo.jpg" alt="FingrLab Logo" class="logo">
+            <h1>FingrLab - Gesture Control</h1>
+        </div>
+    </header>
+
+
+    <div class="container">
+        <video id="webcam" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+        <div id="three-canvas"></div>
+        <div id="status">Loading MediaPipe...</div>
+    </div>
+
+    <div id="onboarding-modal">
+        <div class="modal-content">
+            <h2>Welcome!</h2>
+            <p><strong>Right Hand:</strong> Touch the object with your index finger to change its color.</p>
+            <p><strong>Left Hand:</strong> Pinch your thumb and index finger to change the object's size.</p>
+            <button id="close-modal">Got it!</button>
+        </div>
+    </div>
+
+    <div id="settings-panel">
+        <h3>Shape</h3>
+        <div class="shape-selector">
+            <button id="sphere-btn" class="active">Sphere</button>
+            <button id="cube-btn">Cube</button>
+            <button id="torus-btn">Torus</button>
+        </div>
+    </div>
+
+    <footer>
+        <p class="designed-by">
+            Designed by 
+            <a href="http://www.jayanth.site" target="_blank">
+              Donavalli Jayanth
+            </a>
+          </p>
+          
+
+        <div class="social-icons">
+            <a href="https://github.com/Jayanth0124" target="_blank" aria-label="GitHub">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+                    <path
+                        d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+                </svg>
+            </a>
+            <a href="https://www.linkedin.com/in/jayanth-donavalli" target="_blank" aria-label="LinkedIn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+                    <path
+                        d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854V1.146zm4.943 12.248V6.169H2.542v7.225h2.401zm-1.2-8.212c.837 0 1.358-.554 1.358-1.248-.015-.709-.52-1.248-1.342-1.248-.822 0-1.359.54-1.359 1.248 0 .694.521 1.248 1.327 1.248h.016zm4.908 8.212V9.359c0-.216.016-.432.08-.586.173-.431.568-.878 1.232-.878.869 0 1.216.662 1.216 1.634v3.865h2.401V9.25c0-2.22-1.184-3.252-2.764-3.252-1.274 0-1.845.7-2.165 1.193v.025h-.016a5.54 5.54 0 0 1 .016-.025V6.169h-2.4c.03.678 0 7.225 0 7.225h2.4z" />
+                </svg>
+            </a>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // ... (rest of the script is the same until initThreeJS)
+
+            const videoElement = document.getElementById('webcam');
+            const canvasElement = document.getElementById('canvas');
+            const canvasCtx = canvasElement.getContext('2d');
+            const statusElement = document.getElementById('status');
+            const threeContainer = document.getElementById('three-canvas');
+            const modal = document.getElementById('onboarding-modal');
+            const closeModalBtn = document.getElementById('close-modal');
+
+            // Three.js variables
+            let scene, camera, renderer;
+            let activeShape, solidMesh, wireframeMesh; // Renamed sphere to activeShape
+
+            // Hand tracking variables
+            let rightHandActive = false;
+            let leftHandActive = false;
+            let lastColorChangeTime = 0;
+            const colorChangeDelay = 500; // milliseconds
+            let currentSphereSize = 1.0; // Default/starting size
+            let targetSphereSize = 1.0;  // Target size based on hand gesture
+            const smoothingFactor = 0.15;
+
+            // --- Onboarding Logic ---
+            closeModalBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+
+            // --- Shape Selector Logic ---
+            const shapeButtons = document.querySelectorAll('.shape-selector button');
+            shapeButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    shapeButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    const shapeType = button.id.replace('-btn', '');
+                    changeShape(shapeType);
+                });
+            });
+
+            function changeShape(shapeType) {
+                // Remove the old shape from the scene
+                if (activeShape) {
+                    scene.remove(activeShape);
+                }
+
+                let geometry;
+                switch (shapeType) {
+                    case 'cube':
+                        geometry = new THREE.BoxGeometry(3, 3, 3);
+                        break;
+                    case 'torus':
+                        geometry = new THREE.TorusGeometry(2, 0.8, 16, 100);
+                        break;
+                    case 'sphere':
+                    default:
+                        geometry = new THREE.SphereGeometry(2, 32, 32);
+                        break;
+                }
+
+                // Recreate the shape group
+                activeShape = new THREE.Group();
+
+                const solidMaterial = new THREE.MeshBasicMaterial({
+                    color: solidMesh ? solidMesh.material.color.getHex() : 0xff00ff,
+                    transparent: true,
+                    opacity: 0.5
+                });
+                solidMesh = new THREE.Mesh(geometry, solidMaterial);
+                activeShape.add(solidMesh);
+
+                const wireframeMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    wireframe: true
+                });
+                wireframeMesh = new THREE.Mesh(geometry, wireframeMaterial);
+                activeShape.add(wireframeMesh);
+
+                // Set initial scale and add to scene
+                activeShape.scale.set(currentSphereSize, currentSphereSize, currentSphereSize);
+                scene.add(activeShape);
+            }
+
+            function updateCanvasSize() {
+                canvasElement.width = window.innerWidth;
+                canvasElement.height = window.innerHeight;
+            }
+
+            function initializeLayout() {
+                updateCanvasSize();
+            }
+
+            window.addEventListener('resize', () => {
+                initializeLayout();
+                if (renderer) {
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                }
+                if (camera) {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                }
+            });
+
+            initializeLayout();
+
+            async function initWebcam() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { width: { ideal: 1920 }, height: { ideal: 1080 }, facingMode: 'user' }
+                    });
+                    videoElement.srcObject = stream;
+                    return new Promise((resolve) => {
+                        videoElement.onloadedmetadata = () => {
+                            initializeLayout();
+                            resolve(videoElement);
+                        };
+                    });
+                } catch (error) {
+                    statusElement.textContent = `Error accessing webcam: ${error.message}`;
+                    console.error('Error accessing webcam:', error);
+                    throw error;
+                }
+            }
+
+            function getRandomNeonColor() {
+                const neonColors = [0xFF00FF, 0x00FFFF, 0xFF3300, 0x39FF14, 0xFF0099, 0x00FF00, 0xFF6600, 0xFFFF00];
+                return neonColors[Math.floor(Math.random() * neonColors.length)];
+            }
+
+            function initThreeJS() {
+                scene = new THREE.Scene();
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.z = 5;
+
+                renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setClearColor(0x000000, 0);
+                threeContainer.appendChild(renderer.domElement);
+
+                // Initial shape
+                changeShape('sphere');
+
+                const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+                scene.add(ambientLight);
+
+                animate();
+            }
+
+            function animate() {
+                requestAnimationFrame(animate);
+
+                if (activeShape) {
+                    activeShape.rotation.x += 0.003;
+                    activeShape.rotation.y += 0.008;
+
+                    const time = Date.now() * 0.001;
+                    const pulseIntensity = 0.1 * Math.sin(time * 2) + 0.9;
+                    if (solidMesh && solidMesh.material) {
+                        solidMesh.material.opacity = 0.4 + 0.1 * pulseIntensity;
+                    }
+                }
+
+                renderer.render(scene, camera);
+            }
+
+            function calculateDistance(point1, point2) {
+                const dx = point1.x - point2.x;
+                const dy = point1.y - point2.y;
+                const dz = point1.z - point2.z;
+                return Math.sqrt(dx * dx + dy * dy + dz * dz);
+            }
+
+            function isPointInSphere(point) {
+                const worldX = (point.x - 0.5) * 10;
+                const worldY = (0.5 - point.y) * 10;
+                const worldZ = 0;
+
+                const spherePos = new THREE.Vector3();
+                activeShape.getWorldPosition(spherePos);
+
+                const distance = Math.sqrt(
+                    Math.pow(worldX - spherePos.x, 2) +
+                    Math.pow(worldY - spherePos.y, 2) +
+                    Math.pow(worldZ - spherePos.z, 2)
+                );
+
+                const currentSize = activeShape.scale.x * 2;
+                return distance < currentSize * 1;
+            }
+
+            async function initMediaPipeHands() {
+                statusElement.textContent = 'Initializing MediaPipe Hands...';
+                const hands = new Hands({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+                });
+                hands.setOptions({
+                    maxNumHands: 2,
+                    modelComplexity: 1,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+                await hands.initialize();
+                statusElement.textContent = 'Hand tracking ready!';
+                return hands;
+            }
+
+            function drawLandmarks(landmarks, isLeft) {
+                const screenSize = Math.min(window.innerWidth, window.innerHeight);
+                const lineWidth = Math.max(2, Math.min(5, screenSize / 300));
+                const pointSize = Math.max(2, Math.min(8, screenSize / 250));
+
+                const connections = [
+                    [0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8],
+                    [0, 9], [9, 10], [10, 11], [11, 12], [0, 13], [13, 14], [14, 15], [15, 16],
+                    [0, 17], [17, 18], [18, 19], [19, 20], [0, 5], [5, 9], [9, 13], [13, 17]
+                ];
+
+                const handColor = isLeft ? '#00FF00' : '#00FFFF';
+                canvasCtx.lineWidth = lineWidth;
+                canvasCtx.strokeStyle = handColor;
+
+                connections.forEach(([i, j]) => {
+                    const start = landmarks[i];
+                    const end = landmarks[j];
+                    canvasCtx.beginPath();
+                    canvasCtx.moveTo(start.x * canvasElement.width, start.y * canvasElement.height);
+                    canvasCtx.lineTo(end.x * canvasElement.width, end.y * canvasElement.height);
+                    canvasCtx.stroke();
+                });
+
+                landmarks.forEach((landmark, index) => {
+                    let pointColor = (index === 4 || index === 8) ? '#FF0000' : handColor;
+                    canvasCtx.fillStyle = pointColor;
+                    canvasCtx.beginPath();
+                    canvasCtx.arc(landmark.x * canvasElement.width, landmark.y * canvasElement.height, pointSize * 1.2, 0, 2 * Math.PI);
+                    canvasCtx.fill();
+                });
+            }
+
+            function onResults(results) {
+                canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+                if (canvasElement.width !== window.innerWidth || canvasElement.height !== window.innerHeight) {
+                    updateCanvasSize();
+                }
+
+                rightHandActive = false;
+                leftHandActive = false;
+
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                    statusElement.textContent = `${results.multiHandLandmarks.length} hand${results.multiHandLandmarks.length > 1 ? 's' : ''} detected`;
+
+                    for (let handIndex = 0; handIndex < results.multiHandLandmarks.length; handIndex++) {
+                        const landmarks = results.multiHandLandmarks[handIndex];
+                        const isLeftHand = results.multiHandedness[handIndex].label === 'Left';
+
+                        drawLandmarks(landmarks, isLeftHand);
+
+                        if (!isLeftHand) { // RIGHT HAND
+                            const thumbTip = landmarks[4];
+                            const indexTip = landmarks[8];
+                            const pinchDistance = calculateDistance(thumbTip, indexTip);
+
+                            if (pinchDistance < 0.05) { targetSphereSize = 0.2; }
+                            else if (pinchDistance > 0.25) { targetSphereSize = 2.0; }
+                            else { targetSphereSize = 0.2 + (pinchDistance - 0.05) * (1.8) / (0.2); }
+
+                            currentSphereSize += (targetSphereSize - currentSphereSize) * smoothingFactor;
+
+                            if (activeShape) {
+                                activeShape.scale.set(currentSphereSize, currentSphereSize, currentSphereSize);
+                            }
+                            rightHandActive = true;
+                        } else { // LEFT HAND
+                            const indexTip = landmarks[8];
+                            if (isPointInSphere(indexTip)) {
+                                const currentTime = Date.now();
+                                if (currentTime - lastColorChangeTime > colorChangeDelay) {
+                                    const newColor = getRandomNeonColor();
+                                    if (solidMesh && solidMesh.material) {
+                                        solidMesh.material.color.setHex(newColor);
+                                    }
+                                    lastColorChangeTime = currentTime;
+                                }
+                                leftHandActive = true;
+                            }
+                        }
+                    }
+                } else {
+                    statusElement.textContent = 'No hands detected';
+                }
+            }
+
+            async function startApp() {
+                try {
+                    await initWebcam();
+                    initThreeJS();
+                    const hands = await initMediaPipeHands();
+                    hands.onResults(onResults);
+                    const camera = new Camera(videoElement, {
+                        onFrame: async () => { await hands.send({ image: videoElement }); },
+                        width: 1920, height: 1080
+                    });
+                    camera.start();
+                } catch (error) {
+                    statusElement.textContent = `Error: ${error.message}`;
+                    console.error('Error starting application:', error);
+                }
+            }
+
+            startApp();
+        });
+    </script>
+</body>
+
+</html>
